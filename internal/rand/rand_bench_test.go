@@ -6,11 +6,18 @@ import (
 )
 
 func Benchmark_Uint32(b *testing.B) {
+	type field struct {
+	}
 	type args struct {
+	}
+	type result struct {
+		res1 uint32
 	}
 	type test struct {
 		name       string
+		field      field
 		args       args
+		result     result
 		beforeFunc func()
 		afterFunc  func()
 	}
@@ -30,7 +37,7 @@ func Benchmark_Uint32(b *testing.B) {
 			}
 
 			for i := 0; i < b.N; i++ {
-				Uint32()
+				test.result.res1 = Uint32()
 			}
 		})
 	}
@@ -38,7 +45,9 @@ func Benchmark_Uint32(b *testing.B) {
 
 	type paralleTest struct {
 		name       string
+		field      field
 		args       args
+		result     result
 		paralle    []int
 		beforeFunc func()
 		afterFunc  func()
@@ -65,7 +74,7 @@ func Benchmark_Uint32(b *testing.B) {
 				}
 				b.RunParallel(func(pb *testing.PB) {
 					for pb.Next() {
-						Uint32()
+						test.result.res1 = Uint32()
 					}
 				})
 			})

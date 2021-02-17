@@ -36,8 +36,6 @@ The metrics can be used in different purpose:
 - compare two applications to determine which one works better
 - measure a system to find what performs badly
 
-Ref: https://www.castsoftware.com/glossary/software-performance-benchmarking-modeling#:~:text=Software%20performance%20benchmarking%20serves%20different,to%20find%20what%20performs%20badly.
-
 Here is the example of what to measure in benchmarking:
 
 - How much time consumed for each operation (e.g. time/operation)
@@ -64,13 +62,13 @@ After getting the metrics, we can ask ourself the following questions about the 
 1. How to detect the changes on benchmark result? 
 
 
-
-
 ## Code bench
 
-Code bench is the lowest level of benchmarking in above. It performs the benchmark testing on functions and it provide useful statistic for investigation.
+### Overview
 
-In golang, it supports the get the benchmark metrics by using `go` command.
+Code bench is the lowest level of benchmarking in above. It performs the benchmark testing on functions and it provide useful performance statistic.
+
+In golang, it supports to get the benchmark metrics by using `go` command.
 
 We can measure the CPU and the memory usage/allocation information of the target function.
 
@@ -82,89 +80,59 @@ Benchmark_Uint32/test_rand-4         	17290003	        82.3 ns/op	       0 B/op	
 
 Reference: https://golang.org/pkg/testing/#BenchmarkResult
 
-In the following example, it test the single thread performance of the function.
+### What to test in code bench?
 
-We also need to perform a multi thread performance of the function to find if there is any performance problem in paralle execution.
+We need to initialize the object in real world scerieno (e.g. from `New()`)
+
+Unlike unit test, we focus on testing the performance of the function execution, we do not check the output of the execution result.
+
+Therefore we do not need to test the error case as it is meaningless to the benchmark, because we can't get the correct benchmark result in error case.
+
+The metrics of the benchmark is: 
+
+- Average time cost of each execution
+- Average memory usage / allocation of each execution
+- Parallel execution performance
 
 Reference: https://qiita.com/marnie_ms4/items/8706f43591fb23dd4e64
 
-### How to write bench code?
+### Testing data
+
+Unlike stress test, performance test check the system performance under varying loads, while stress testing is check the system behavior under sudden increased load. 
+
+To design testing data, we need to think about the following things:
+
+- How the parameter affects the benchmark result
+- How execution times will affect the benchmark result
+- What is the realistic use case
+
+
+### Additional things we need to concern
+
+- We should avoid other factors to affect the benchmark result (e.g. the machine is not in idle status, etc)
+- Different environment have different settings (e.g. hardware & OS settings/version), so the result may different in different environment
+- The benchmark result may not accurate if the test is not getting enough sample to calculate the average
+- We may need to consider re-run the benchmark test in sometime later
+- Avoid overhead from initialize value (function value)
+- Avoid possible compiler optimisation: store the return value from the result.
+
+### How to implement bench code?
 
 Create / generate a file called `[filename]_bench_test.go`.
 
 For example if we want to test the `internal/rand/rand.go` file, you need to create / generate a file called `internal/rand/rand_bench_test.go` file.
 
-To execute the benchmarking, use the `go test -bench . -benchmem` command.
+To execute the benchmarking, use the `go test -bench . -benchmem -cpu=1,2,4,6 -benchtime=5s` command.
 
 We implement benchmark code for each function we want to test.
 
-We should follow this template to write the benchmark code.
+### What we need to think later?
 
-```golang
-func Benchmark_Uint32(b *testing.B) {
-	type args struct {
-	}
-	type test struct {
-		name       string
-		args       args
-		beforeFunc func()
-		afterFunc  func()
-	}
+- Consider writing Makefile to execute bench test in different package with different parameter
 
-	tests := []test{
-		{
-			name: "test rand",
-		},
-	}
-	for _, test := range tests {
-		b.Run(test.name, func(b *testing.B) {
-			if test.beforeFunc != nil {
-				test.beforeFunc()
-			}
-			if test.afterFunc != nil {
-				defer test.afterFunc()
-			}
 
-			for i := 0; i < b.N; i++ {
-				Uint32()
-			}
-		})
-	}
-	b.ResetTimer()
+### Ref
 
-	type paralleTest struct {
-		name       string
-		args       args
-		paralle    []int
-		beforeFunc func()
-		afterFunc  func()
-	}
-	ptests := []paralleTest{
-		{
-			name:    "test rand",
-			paralle: []int{1, 2, 4, 6, 8, 16},
-		},
-	}
-	for _, ptest := range ptests {
-		test := ptest
-		for _, p := range test.paralle {
-			name := test.name + "-" + strconv.Itoa(p)
-			b.Run(name, func(b *testing.B) {
-				b.SetParallelism(p)
-				b.ResetTimer()
-
-				if test.beforeFunc != nil {
-					test.beforeFunc()
-				}
-				if test.afterFunc != nil {
-					defer test.afterFunc()
-				}
-				b.RunParallel(func(pb *testing.PB) {
-					for pb.Next() {
-						Uint32()
-					}
-				})
-			})
-		}
-	}
-```
+- https://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go
+- https://dave.cheney.net/high-performance-go-workshop/gophercon-2019.html#benchmarking
+- https://www.castsoftware.com/glossary/software-performance-benchmarking-modeling#:~:text=Software%20performance%20benchmarking%20serves%20different,to%20find%20what%20performs%20badly.
