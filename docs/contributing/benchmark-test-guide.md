@@ -98,23 +98,31 @@ Reference: https://qiita.com/marnie_ms4/items/8706f43591fb23dd4e64
 
 ### Testing data
 
-Unlike stress test, performance test check the system performance under varying loads, while stress testing is check the system behavior under sudden increased load. 
+// Unlike stress test, performance test check the system performance under varying loads, while stress testing is check the system behavior under sudden increased load. 
 
 To design testing data, we need to think about the following things:
 
 - How the parameter affects the benchmark result
-- How execution times will affect the benchmark result
+- If number of execution will affect the benchmark result
+- How the cache affects the result
 - What is the realistic use case
+- We need to test the heavy loading cases
 
+For example, to think about testing the [json decode performance](https://github.com/vdaas/vald/blob/master/internal/encoding/json/json.go#L29), we should test the following data:
 
-### Additional things we need to concern
+- io.Reader with empty data and data is a struct with 1 field
+- io.Reader with 10 data and data is a struct with 1 field
+- io.Reader with 100 data and data is a struct with 1 field
+- io.Reader with empty data and data is a struct with 10 field
+- io.Reader with 10 data and data is a struct with 10 field
+- io.Reader with 100 data and data is a struct with 10 field
+- io.Reader with 100 data and data is a struct with 50 field
 
-- We should avoid other factors to affect the benchmark result (e.g. the machine is not in idle status, etc)
-- Different environment have different settings (e.g. hardware & OS settings/version), so the result may different in different environment
-- The benchmark result may not accurate if the test is not getting enough sample to calculate the average
-- We may need to consider re-run the benchmark test in sometime later
-- Avoid overhead from initialize value (function value)
-- Avoid possible compiler optimisation: store the return value from the result.
+### Testing result
+
+The testing result may different in different environment, sso it is relative to different environment.
+
+If we found any problems in the testing result, for example the function requires many memory space or the function takes more time to execute than expected, we should report it to authors and ask if the result is expected or not.
 
 ### How to implement bench code?
 
@@ -124,7 +132,15 @@ For example if we want to test the `internal/rand/rand.go` file, you need to cre
 
 To execute the benchmarking, use the `go test -bench . -benchmem -cpu=1,2,4,6 -benchtime=5s` command.
 
-We implement benchmark code for each function we want to test.
+### Additional things we need to concern
+
+- We should avoid other factors to affect the benchmark result (e.g. the machine is not in idle status, etc)
+  - Avoid overhead from initialize value (function value)
+  - Avoid possible compiler optimisation: store the return value from the result.
+- Different environment have different settings (e.g. hardware & OS settings/version), so the result may different in different environment
+- The benchmark result may not accurate if the test is not getting enough sample to calculate the average
+- We may need to consider re-run the benchmark test in sometime later
+
 
 ### What we need to think later?
 
