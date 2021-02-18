@@ -223,9 +223,9 @@ func ScanPorts(ctx context.Context, start, end uint16, host string) (ports []uin
 			case <-egctx.Done():
 				return egctx.Err()
 			default:
-				conn, err := der.DialContext(ctx, TCP.String(), JoinHostPort(host, port))
+				addr := JoinHostPort(host, port)
+				conn, err := der.DialContext(ctx, TCP.String(), addr)
 				if err != nil {
-					log.Warn(err)
 					return nil
 				}
 
@@ -234,7 +234,7 @@ func ScanPorts(ctx context.Context, start, end uint16, host string) (ports []uin
 				mu.Unlock()
 
 				if err = conn.Close(); err != nil {
-					log.Warn(err)
+					log.Warnf("failed to close scan connection for %s, error: %v", addr, err)
 				}
 				return nil
 			}
